@@ -1,2 +1,2 @@
-gcc shell.c -o shell
-./shell
+gcc shell.c -o ./bin/shell
+./bin/shell
