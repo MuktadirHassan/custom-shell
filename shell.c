@@ -12,6 +12,7 @@
 #include <time.h>
 
 #define MAX_COMMAND_LENGTH 100
+#define MAX_HISTORY_SIZE 10
 
 // ANSI color codes
 #define RED "\x1B[31m"
@@ -37,11 +38,19 @@
 // Global variable to track if Ctrl+C was pressed
 volatile sig_atomic_t ctrlCPressed = 0;
 
-void print_prompt()
+// Signal handler for SIGINT (Ctrl+C)
+void sigintHandler(int signum)
 {
-    printf(BOLD GREEN "muktadir@shell" RESET ":~" BOLD BLUE "$ " RESET);
+    ctrlCPressed = 1;
 }
 
+// print prompt
+void print_prompt()
+{
+    printf(BOLD GREEN "myshell@shell" RESET ":~" BOLD BLUE "$ " RESET);
+}
+
+// parse command into arguments
 void parse_command(char *command, char **args)
 {
     // remove newline character
@@ -60,67 +69,94 @@ void parse_command(char *command, char **args)
 
 // first argument is the command
 // rest are options such as -l, -a, -r
+// execute command and measure time taken
 void execute_command(char **args)
 {
-
     pid_t pid = fork();
+    // execute command and measure time taken
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     if (pid == 0)
     {
         execvp(args[0], args);
-        printf("Command not found\n");
-        exit(0);
+
+        // exit child process
+        perror("execvp() error");
+        exit(EXIT_FAILURE);
+    }
+    else if (pid > 0)
+    {
+        int status;
+        waitpid(pid, &status, 0);
+        // calculate time taken in milliseconds
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        double time_taken = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_nsec - start.tv_nsec) / 1000000.0;
+
+        // print time taken with color
+        printf(BOLD YELLOW "Time taken: %f ms\n" RESET, time_taken);
+
+        // check if command executed successfully
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        {
+            printf(BOLD GREEN "Command executed successfully\n" RESET);
+        }
+        else
+        {
+            printf(BOLD RED "Command execution failed\n" RESET);
+        }
     }
     else
     {
-        wait(NULL);
+        // fork failed
+        perror("fork() error");
+        exit(EXIT_FAILURE);
     }
 }
 
-/**
- * Main
- * @brief The main function of the shell.
- *
- * This function is the entry point of the shell program. It prints a welcome
- * message and then enters an infinite loop where it
- *  1. Prints a prompt
- *  2. Reads a command
- *  3. Parses the command into arguments
- *  4. Executes the command
- *  5. Prints the exit status of the command
- *  6. Repeats
- *  7. Exits when the command "exit" is entered or Ctrl-D is pressed
- *  8. Ctrl+c should terminate the current process, but not the shell
- *  9. "Enter" should do nothing if the command is empty
- *
- *
- */
+// add command to history
+void add_to_history(char *command, char **history, int *history_count)
+{
+    if (*history_count < MAX_HISTORY_SIZE)
+    {
+        history[*history_count] = strdup(command);
+        (*history_count)++;
+    }
+    else
+    {
+        free(history[0]);
+        for (int i = 0; i < MAX_HISTORY_SIZE - 1; i++)
+        {
+            history[i] = history[i + 1];
+        }
+        history[MAX_HISTORY_SIZE - 1] = strdup(command);
+    }
+}
 
-// Signal handler for SIGINT (Ctrl+C)
-// void sigintHandler(int signum)
-// {
-//     ctrlCPressed = 1;
-// }
-
-// void add_to_history(char *command)
-// {
-//     // open file in append mode
-//     FILE *fp = fopen("history", "a");
-
-//     // write command to file
-//     fprintf(fp, "%s", command);
-
-//     // close file
-//     fclose(fp);
-// }
+// print command history
+void print_history(char **history, int history_count)
+{
+    printf(BOLD "Command History:\n" RESET);
+    for (int i = 0; i < history_count; i++)
+    {
+        printf("%d. %s\n", i + 1, history[i]);
+    }
+}
 
 int main(void)
 {
     printf("Welcome to Muktadir's Shell\n");
 
+    char *history[MAX_HISTORY_SIZE];
+    int history_count = 0;
+    int current_history_index = 0;
+
     while (true)
     {
         // print prompt
         print_prompt();
+
+        // register signal handler for SIGINT (Ctrl+C)
+        signal(SIGINT, sigintHandler);
 
         // read and store command
         char command[MAX_COMMAND_LENGTH];
@@ -138,21 +174,32 @@ int main(void)
             continue;
         }
 
+        // Add command to history
+        add_to_history(command, history, &history_count);
+
         // parse command into arguments
         char *args[MAX_COMMAND_LENGTH];
         parse_command(command, args);
 
         // ...
 
-        // execute command and measure time taken
-        clock_t start = clock();
+        // Reset Ctrl+C flag
+        ctrlCPressed = 0;
+
+        // execute command
         execute_command(args);
-        clock_t end = clock();
 
-        // calculate time taken in milliseconds
-        double time_taken = ((double)(end - start) / CLOCKS_PER_SEC) * 1000;
+        // Check if Ctrl+C was pressed
+        if (ctrlCPressed)
+        {
+            printf(BOLD RED "Process terminated by Ctrl+C\n" RESET);
+        }
+    }
 
-        // print time taken
+    // Free history memory
+    for (int i = 0; i < history_count; i++)
+    {
+        free(history[i]);
     }
 
     return 0;
