@@ -13,7 +13,6 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 
 #define MAX_COMMAND_LENGTH 100
 #define MAX_HISTORY_SIZE 10
@@ -39,9 +38,6 @@
 #define RIGHT "\033[1C"
 #define LEFT "\033[1D"
 
-// Function declarations
-void listFiles();
-
 // Global variable to track if Ctrl+C was pressed
 volatile sig_atomic_t ctrlCPressed = 0;
 
@@ -65,7 +61,7 @@ void print_prompt()
     if (first_time)
     {
         // clear screen
-        // clear_screen();
+        clear_screen();
         first_time = 0;
         printf("Welcome to Muktadir's Shell\n" RESET);
     }
@@ -73,7 +69,7 @@ void print_prompt()
     if (getcwd(cwd, sizeof(cwd)) == NULL)
     {
         perror("getcwd() error");
-        return;
+        return 1;
     }
 
     printf("\033[1;32m");
@@ -124,13 +120,12 @@ void parse_command(char *command, char **args, bool *background)
 // execute command and measure time taken
 void execute_command(char **args, bool background)
 {
-    printf("\n\n");
-    printf(BOLD CYAN "Command " RESET);
+    printf("\n");
+    printf(BOLD CYAN "Executing command: " RESET);
     for (int i = 0; args[i] != NULL; i++)
     {
-        printf("%s", args[i]);
+        printf("%s\n", args[i]);
     }
-    printf("\n\n");
 
     if (strcmp(args[0], "cd") == 0)
     {
@@ -145,7 +140,7 @@ void execute_command(char **args, bool background)
                 perror("chdir() error");
             }
         }
-        return;
+        return 0;
     }
 
     // check for redirection
@@ -164,6 +159,14 @@ void execute_command(char **args, bool background)
             args[i] = NULL;
         }
     }
+
+    printf("\n");
+    printf(BOLD CYAN "Executing command: " RESET);
+    for (int i = 0; args[i] != NULL; i++)
+    {
+        printf("%s\n", args[i]);
+    }
+    printf("\n\n");
 
     // fork child process
     pid_t pid = fork();
@@ -283,7 +286,7 @@ int main(void)
 
         if (strcmp(command, "ls\n") == 0)
         {
-            listFiles();
+            ls();
             continue;
         }
 
@@ -309,7 +312,7 @@ int main(void)
 }
 
 // implementation of ls command
-void listFiles()
+void ls()
 {
     // open current directory
     DIR *dir = opendir(".");
