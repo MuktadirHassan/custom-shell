@@ -16,7 +16,6 @@
 #include <fcntl.h>
 
 #define MAX_COMMAND_LENGTH 100
-#define MAX_HISTORY_SIZE 10
 
 // ANSI color codes
 #define RED "\x1B[31m"
