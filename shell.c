@@ -41,6 +41,7 @@
 
 // Function declarations
 void listFiles();
+void current_directory();
 
 // Global variable to track if Ctrl+C was pressed
 volatile sig_atomic_t ctrlCPressed = 0;
@@ -65,9 +66,17 @@ void print_prompt()
     if (first_time)
     {
         // clear screen
-        // clear_screen();
+        clear_screen();
         first_time = 0;
-        printf("Welcome to Muktadir's Shell\n" RESET);
+        printf(CYAN BOLD UNDERLINE "Welcome to Muktadir's Shell\n" RESET);
+        printf(BOLD "Type \"exit\" to exit the shell\n" RESET);
+        printf(BOLD "Type \"clear\" to clear the screen\n" RESET);
+        printf(BOLD "Type \"ls\" to list files in the current directory\n" RESET);
+        printf(BOLD "Type \"pwd\" to print the current directory\n" RESET);
+        printf(BOLD "Type \"cd <directory>\" to change the current directory\n" RESET);
+        printf(BOLD "Type \"<command> &\" to run the command in the background\n" RESET);
+        printf(BOLD "Type \"<command> < <input_file>\" to redirect input from a file\n" RESET);
+        printf(BOLD "Type \"<command> > <output_file>\" to redirect output to a file\n" RESET);
     }
 
     if (getcwd(cwd, sizeof(cwd)) == NULL)
@@ -80,8 +89,7 @@ void print_prompt()
     printf("muktadir");
     printf("\033[0m");
     printf("👌");
-    printf("\033[1;34m");
-    printf("%s", cwd);
+    printf(CYAN "%s", cwd);
     printf("\033[0m");
     printf("$ ");
     fflush(stdout);
@@ -287,6 +295,12 @@ int main(void)
             continue;
         }
 
+        if (strcmp(command, "pwd\n") == 0)
+        {
+            current_directory();
+            continue;
+        }
+
         // parse command into arguments
         char *args[MAX_COMMAND_LENGTH];
         bool background = false;
@@ -370,4 +384,15 @@ void listFiles()
 
     // close directory
     closedir(dir);
+}
+
+void current_directory()
+{
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) == NULL)
+    {
+        perror("getcwd() error");
+        return;
+    }
+    printf("Current Directory: %s\n", cwd);
 }
