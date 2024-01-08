@@ -10,3 +10,19 @@
  *  7. Exits when the command "exit" is entered or Ctrl-D is pressed
  *  8. Ctrl+c should terminate the current process, but not the shell
  *  9. "Enter" should do nothing if the command is empty
+
+
+ ```mermaid
+ graph TD
+    A[Start Shell] --> B{Read Input}
+    B -->|Command Entered| C[Parse Input]
+    C --> D{Is it a Built-in Command?}
+    D -->|Yes| E[Execute Built-in Command]
+    D -->|No| F[Execute System Command]
+    E --> G[Output Result]
+    F --> G
+    G --> H{Any Errors?}
+    H -->|Yes| I[Display Error]
+    H -->|No| B
+    I --> B
+ ```
