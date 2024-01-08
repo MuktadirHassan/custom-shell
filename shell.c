@@ -275,6 +275,8 @@ int main(void)
         if (strcmp(command, "exit\n") == 0)
         {
             printf("Exiting shell...\n" RESET);
+            printf(BOLD CYAN "Bye!\n" RESET);
+
             break;
         }
 
