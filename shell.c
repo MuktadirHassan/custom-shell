@@ -135,7 +135,7 @@ void execute_command(char **args, bool background)
     printf(BOLD CYAN "Command " RESET);
     for (int i = 0; args[i] != NULL; i++)
     {
-        printf("%s", args[i]);
+        printf("%s ", args[i]);
     }
     printf("\n\n");
 
